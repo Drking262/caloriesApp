@@ -31,6 +31,21 @@ export default defineConfig(({ command }) => ({
         // precache the built app shell so it launches offline; camera/API
         // calls still need the device itself, not the network
         globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+        runtimeCaching: [
+          {
+            // MobileNet's weights (fetched from TF Hub / Kaggle Models / GCS on
+            // first classification) are immutable once versioned — cache them
+            // so on-device recognition keeps working offline after first use.
+            urlPattern: ({ url }) =>
+              /(^|\.)tfhub\.dev$|(^|\.)kaggle\.com$|(^|\.)googleapis\.com$/.test(url.hostname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'ml-model-weights',
+              expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 180 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
     }),
   ],

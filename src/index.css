@@ -231,6 +231,16 @@ input {
   background: radial-gradient(120% 80% at 50% 30%, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.55) 75%);
   pointer-events: none;
 }
+/* Live camera feed: no darkening, just enough top fade to keep the kcal pill readable */
+.viewfinder-topfade {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 90px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0));
+  pointer-events: none;
+}
 .viewfinder-hint {
   position: absolute;
   top: 44%;

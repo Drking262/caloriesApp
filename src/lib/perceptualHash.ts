@@ -147,3 +147,19 @@ export function thumbnailFromSource(source: CanvasImageSource, size = 160): stri
   ctx.drawImage(source, 0, 0, size, size);
   return canvas.toDataURL('image/jpeg', 0.6);
 }
+
+/** Freeze the current video frame into a plain canvas, once, so hashing,
+ * the thumbnail, and (async, later) model classification all see the exact
+ * same moment — the live video keeps playing and would otherwise have
+ * moved on by the time an awaited classification call gets to it. */
+export function snapshotCanvas(video: HTMLVideoElement, maxEdge = 480): HTMLCanvasElement {
+  const w = video.videoWidth || maxEdge;
+  const h = video.videoHeight || maxEdge;
+  const scale = Math.min(1, maxEdge / Math.max(w, h));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(w * scale));
+  canvas.height = Math.max(1, Math.round(h * scale));
+  const ctx = canvas.getContext('2d');
+  if (ctx) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}

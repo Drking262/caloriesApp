@@ -5,6 +5,7 @@ import { gradeFor } from '../lib/grade';
 import { makeId } from '../lib/id';
 import { bestMatch, AUTO_MATCH_THRESHOLD } from '../lib/match';
 import { randomDatabaseFood, type DatabaseFood } from '../lib/foodDatabase';
+import { classifyFood } from '../lib/foodClassifier';
 
 type Action =
   | { type: 'UPSERT_LOG_AND_MEMORY'; log: LogEntry; memory: FoodMemoryEntry }
@@ -45,7 +46,11 @@ function reducer(state: AppState, action: Action): AppState {
 
 interface StoreApi {
   state: AppState;
-  logFromCapture: (hashes: string[], thumbnail: string) => { logId: string; matched: boolean; confidence: number | null };
+  logFromCapture: (
+    hashes: string[],
+    thumbnail: string,
+    frame: HTMLCanvasElement,
+  ) => Promise<{ logId: string; matched: boolean; confidence: number | null }>;
   logFromMemory: (memoryId: string) => string;
   logFromDatabaseFood: (food: DatabaseFood) => string;
   reassignToMemory: (logId: string, entry: FoodMemoryEntry) => void;
@@ -63,7 +68,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => saveState(state), [state]);
 
   const api = useMemo<Omit<StoreApi, 'state'>>(() => {
-    function logFromCapture(hashes: string[], thumbnail: string) {
+    async function logFromCapture(hashes: string[], thumbnail: string, frame: HTMLCanvasElement) {
       const top = bestMatch(hashes, state.memory);
       const now = Date.now();
       const canonicalHash = hashes[0]; // unrotated — what gets stored as a memory's reference photo
@@ -95,9 +100,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return { logId: log.id, matched: true, confidence: top.confidence };
       }
 
-      // No confident memory match — fall back to a generic guess and start
-      // remembering this photo, so the *next* shot of the same plate matches.
-      const guess: DatabaseFood = randomDatabaseFood();
+      // No confident memory match — ask the on-device model to identify it
+      // instead of guessing randomly. Falls back to a random guess only if
+      // the model has nothing confident to say.
+      const prediction = await classifyFood(frame);
+      const guess: DatabaseFood = prediction?.food ?? randomDatabaseFood();
       const memoryId = makeId();
       const grade = gradeFor(guess);
       const memory: FoodMemoryEntry = {
@@ -109,7 +116,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         timesLogged: 1,
         lastLoggedAt: now,
         createdAt: now,
-        source: 'database',
+        source: prediction ? 'photo' : 'database',
         confirmed: false,
       };
       const log: LogEntry = {
@@ -127,7 +134,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         sodium: guess.sodium,
         grade,
         loggedAt: now,
-        note: "New food — not in your memory yet. This is a placeholder guess, tap Fix it if it's wrong.",
+        note: prediction
+          ? `Recognized as ${guess.name} by the on-device model (${Math.round(prediction.probability * 100)}% confidence) — not in your memory yet, tap Fix it if it's wrong.`
+          : "New food — the model wasn't confident either. This is a placeholder guess, tap Fix it if it's wrong.",
         thumbnail,
         photoHash: canonicalHash,
         matchConfidence: null,

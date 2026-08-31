@@ -4,10 +4,9 @@ import { useStore } from '../state/store';
 import { sumMacros } from '../lib/nutrition';
 import { todaysLogs } from '../lib/selectors';
 import { byFrecency } from '../lib/match';
+import { warmUpClassifier } from '../lib/foodClassifier';
 import { SearchSheet } from '../components/SearchSheet';
 import type { FoodMemoryEntry, Screen } from '../types';
-
-const SCAN_MS = 550;
 
 export function CameraScreen({
   onLogged,
@@ -27,6 +26,12 @@ export function CameraScreen({
     return stop;
   }, [facing, start, stop]);
 
+  // Preload the recognition model in the background so it's likely warm by
+  // the time the user actually taps the shutter (only fetches/runs once).
+  useEffect(() => {
+    warmUpClassifier();
+  }, []);
+
   const todays = useMemo(() => todaysLogs(state.logs), [state.logs]);
   const totals = useMemo(() => sumMacros(todays), [todays]);
   const remain = Math.max(0, state.goal.kcal - totals.kcal);
@@ -34,16 +39,14 @@ export function CameraScreen({
   const topMemory: FoodMemoryEntry | undefined = useMemo(() => byFrecency(state.memory)[0], [state.memory]);
   const lastLog = todays[todays.length - 1];
 
-  function handleShutter() {
+  async function handleShutter() {
     if (scanning) return;
     const shot = capture();
     if (!shot) return;
     setScanning(true);
-    window.setTimeout(() => {
-      setScanning(false);
-      const result = logFromCapture(shot.hashes, shot.thumbnail);
-      onLogged(result.logId);
-    }, SCAN_MS);
+    const result = await logFromCapture(shot.hashes, shot.thumbnail, shot.frame);
+    setScanning(false);
+    onLogged(result.logId);
   }
 
   function handleRepeat() {
@@ -54,16 +57,19 @@ export function CameraScreen({
   return (
     <div style={{ height: '100%', position: 'relative' }}>
       <div className="viewfinder">
-        {status === 'ready' && <video ref={videoRef} muted playsInline />}
+        {status === 'ready' && <video ref={videoRef} autoPlay muted playsInline />}
         {status !== 'ready' && (
-          <div className="viewfinder-hint">
-            {status === 'unsupported' && <>CAMERA NOT AVAILABLE<br />on this device/browser</>}
-            {status === 'denied' && <>CAMERA ACCESS DENIED<br />allow it in browser settings</>}
-            {(status === 'idle' || status === 'starting') && <>STARTING CAMERA…</>}
-            {status === 'error' && <>CAMERA ERROR<br />try again</>}
-          </div>
+          <>
+            <div className="viewfinder-vignette" />
+            <div className="viewfinder-hint">
+              {status === 'unsupported' && <>CAMERA NOT AVAILABLE<br />on this device/browser</>}
+              {status === 'denied' && <>CAMERA ACCESS DENIED<br />allow it in browser settings</>}
+              {(status === 'idle' || status === 'starting') && <>STARTING CAMERA…</>}
+              {status === 'error' && <>CAMERA ERROR<br />try again</>}
+            </div>
+          </>
         )}
-        <div className="viewfinder-vignette" />
+        {status === 'ready' && <div className="viewfinder-topfade" />}
       </div>
 
       <div style={{ position: 'relative', padding: '14px 16px 0', display: 'flex', alignItems: 'center', gap: 10 }}>

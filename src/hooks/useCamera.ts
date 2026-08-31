@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { hashVariantsFromSource, thumbnailFromSource } from '../lib/perceptualHash';
+import { hashVariantsFromSource, snapshotCanvas, thumbnailFromSource } from '../lib/perceptualHash';
 
 export type CameraStatus = 'idle' | 'starting' | 'ready' | 'denied' | 'unsupported' | 'error';
 
@@ -7,6 +7,8 @@ export interface CaptureResult {
   /** hashVariantsFromSource output — index 0 is the canonical unrotated hash */
   hashes: string[];
   thumbnail: string;
+  /** the frozen frame, for the (async) on-device classifier to inspect */
+  frame: HTMLCanvasElement;
 }
 
 export function useCamera() {
@@ -51,7 +53,8 @@ export function useCamera() {
   const capture = useCallback((): CaptureResult | null => {
     const video = videoRef.current;
     if (!video || status !== 'ready') return null;
-    return { hashes: hashVariantsFromSource(video), thumbnail: thumbnailFromSource(video) };
+    const frame = snapshotCanvas(video);
+    return { hashes: hashVariantsFromSource(frame), thumbnail: thumbnailFromSource(frame), frame };
   }, [status]);
 
   return { videoRef, status, start, stop, capture };
