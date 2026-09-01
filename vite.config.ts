@@ -33,15 +33,15 @@ export default defineConfig(({ command }) => ({
         globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
         runtimeCaching: [
           {
-            // MobileNet's weights (fetched from TF Hub / Kaggle Models / GCS on
-            // first classification) are immutable once versioned — cache them
-            // so on-device recognition keeps working offline after first use.
+            // CLIP's weights (fetched from the Hugging Face Hub CDN on first
+            // classification) are immutable once versioned — cache them so
+            // on-device recognition keeps working offline after first use.
             urlPattern: ({ url }) =>
-              /(^|\.)tfhub\.dev$|(^|\.)kaggle\.com$|(^|\.)googleapis\.com$/.test(url.hostname),
+              /(^|\.)huggingface\.co$|(^|\.)hf\.co$/.test(url.hostname),
             handler: 'CacheFirst',
             options: {
               cacheName: 'ml-model-weights',
-              expiration: { maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 180 },
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 180 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
