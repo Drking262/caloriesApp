@@ -57,7 +57,10 @@ export function CameraScreen({
   return (
     <div style={{ height: '100%', position: 'relative' }}>
       <div className="viewfinder">
-        {status === 'ready' && <video ref={videoRef} autoPlay muted playsInline />}
+        {/* Always mounted (not gated on status) so videoRef.current already
+            exists by the time start() assigns the stream to it — otherwise
+            the stream attaches to nothing and the element stays blank. */}
+        <video ref={videoRef} autoPlay muted playsInline style={{ opacity: status === 'ready' ? 1 : 0 }} />
         {status !== 'ready' && (
           <>
             <div className="viewfinder-vignette" />
