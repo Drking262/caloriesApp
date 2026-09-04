@@ -157,6 +157,7 @@ export async function searchNutrition(query: string, options: NutritionSearchOpt
     cache.set(cacheKey, results);
     return results;
   } catch (err) {
+    if (options.signal?.aborted) return []; // caller cancelled (e.g. a superseded search) — not a failure
     console.warn('nutritionApi: USDA search failed', err);
     options.onFailure?.();
     return [];
