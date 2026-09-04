@@ -1,8 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../state/store';
 import { byFrecency } from '../lib/match';
 import { searchDatabase, type DatabaseFood } from '../lib/foodDatabase';
+import { searchNutrition } from '../lib/nutritionApi';
 import type { FoodMemoryEntry } from '../types';
+
+const MIN_QUERY_LENGTH = 3;
+const DEBOUNCE_MS = 500;
 
 interface SearchSheetProps {
   onClose: () => void;
@@ -13,6 +17,8 @@ interface SearchSheetProps {
 export function SearchSheet({ onClose, onPickMemory, onPickDatabase }: SearchSheetProps) {
   const { state } = useStore();
   const [query, setQuery] = useState('');
+  const [apiHits, setApiHits] = useState<DatabaseFood[]>([]);
+  const [apiOffline, setApiOffline] = useState(false);
 
   const memoryHits = useMemo(() => {
     const ranked = byFrecency(state.memory);
@@ -25,6 +31,44 @@ export function SearchSheet({ onClose, onPickMemory, onPickDatabase }: SearchShe
   const databaseHits = useMemo(
     () => searchDatabase(query).filter((f) => !memoryNames.has(f.name.toLowerCase())).slice(0, 8),
     [query, memoryNames],
+  );
+
+  // Live global search: debounced so typing doesn't hammer USDA's rate
+  // limit (30 req/hour on the shared demo key), cancels a stale request
+  // when the query changes again before it resolves, and skips the network
+  // call entirely when offline rather than firing a request doomed to fail.
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < MIN_QUERY_LENGTH) {
+      setApiHits([]);
+      setApiOffline(false);
+      return;
+    }
+    if (!navigator.onLine) {
+      setApiHits([]);
+      setApiOffline(true);
+      return;
+    }
+    setApiOffline(false);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      searchNutrition(q, { signal: controller.signal }).then((results) => {
+        if (!controller.signal.aborted) setApiHits(results);
+      });
+    }, DEBOUNCE_MS);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
+
+  const excludeFromGlobal = useMemo(
+    () => new Set([...memoryNames, ...databaseHits.map((f) => f.name.toLowerCase())]),
+    [memoryNames, databaseHits],
+  );
+  const globalHits = useMemo(
+    () => apiHits.filter((f) => !excludeFromGlobal.has(f.name.toLowerCase())),
+    [apiHits, excludeFromGlobal],
   );
 
   return (
@@ -84,7 +128,35 @@ export function SearchSheet({ onClose, onPickMemory, onPickDatabase }: SearchShe
             </button>
           ))}
 
-          {memoryHits.length === 0 && databaseHits.length === 0 && (
+          {apiOffline && (
+            <div style={{ color: 'var(--text-dim)', fontSize: 13, padding: '12px 4px' }}>
+              Global search unavailable — check your connection.
+            </div>
+          )}
+          {globalHits.length > 0 && <div className="sheet-section">GLOBAL DATABASE</div>}
+          {globalHits.map((f) => (
+            <button
+              key={`global-${f.name}`}
+              type="button"
+              className="list-item"
+              onClick={() => {
+                onPickDatabase(f);
+                onClose();
+              }}
+            >
+              <div className="list-thumb" />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="name">{f.name}</div>
+                <div className="sub">from USDA FoodData Central</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div className="kcal">{f.kcal}</div>
+                <div className="sub" style={{ marginTop: 2 }}>kcal/100g</div>
+              </div>
+            </button>
+          ))}
+
+          {memoryHits.length === 0 && databaseHits.length === 0 && globalHits.length === 0 && !apiOffline && (
             <div style={{ color: 'var(--text-dim)', fontSize: 13, padding: '12px 4px' }}>No matches.</div>
           )}
         </div>
