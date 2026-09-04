@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# API keys for local development (see .env.example)
+.env
+
 # Isolated workspaces for subagent-driven feature work
 .worktrees
 
