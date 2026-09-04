@@ -2,10 +2,10 @@ import type { LogEntry, Macros } from '../types';
 
 const ZERO: Macros = { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 };
 
-/** LogEntry macros are stored for `gramsPerServing` grams; this scales them
- * to the actual `grams` eaten — the only value a user edits directly. */
+/** LogEntry macros are stored per 100g; this scales them to the actual
+ * `grams` eaten — the only value a user edits directly. */
 export function scaledMacros(log: LogEntry): Macros {
-  const scale = log.gramsPerServing > 0 ? log.grams / log.gramsPerServing : 0;
+  const scale = log.grams / 100;
   return {
     kcal: Math.round(log.kcal * scale),
     protein: Math.round(log.protein * scale),

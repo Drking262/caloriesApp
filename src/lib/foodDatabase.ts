@@ -3,8 +3,9 @@ import { FOOD_LABEL_MAP } from './foodLabels';
 
 export interface DatabaseFood extends Macros {
   name: string;
-  /** typical weight in grams that the macros above describe */
-  gramsPerServing: number;
+  /** default grams to seed a new log with — just a starting guess, not part
+   * of the nutrition math (Macros above is always per 100g) */
+  typicalGrams: number;
 }
 
 /**
@@ -12,11 +13,11 @@ export interface DatabaseFood extends Macros {
  * covered by a single labeled entry in foodLabels.ts. Rough estimates.
  */
 const GENERIC_FOODS: DatabaseFood[] = [
-  { name: 'Chicken burrito bowl', gramsPerServing: 450, kcal: 620, protein: 44, carbs: 61, fat: 21, fiber: 9, sugar: 6, sodium: 980 },
-  { name: 'Turkey club sandwich', gramsPerServing: 280, kcal: 540, protein: 32, carbs: 42, fat: 26, fiber: 3, sugar: 6, sodium: 1180 },
-  { name: 'Beef stir-fry with rice', gramsPerServing: 480, kcal: 660, protein: 38, carbs: 72, fat: 22, fiber: 4, sugar: 9, sodium: 1340 },
-  { name: 'Greek yogurt + berries', gramsPerServing: 250, kcal: 220, protein: 18, carbs: 26, fat: 5, fiber: 4, sugar: 18, sodium: 65 },
-  { name: 'Veggie stir-fry with tofu', gramsPerServing: 400, kcal: 380, protein: 20, carbs: 40, fat: 16, fiber: 8, sugar: 8, sodium: 820 },
+  { name: 'Chicken burrito bowl', typicalGrams: 450, kcal: 137.8, protein: 9.8, carbs: 13.6, fat: 4.7, fiber: 2, sugar: 1.3, sodium: 217.8 },
+  { name: 'Turkey club sandwich', typicalGrams: 280, kcal: 192.9, protein: 11.4, carbs: 15, fat: 9.3, fiber: 1.1, sugar: 2.1, sodium: 421.4 },
+  { name: 'Beef stir-fry with rice', typicalGrams: 480, kcal: 137.5, protein: 7.9, carbs: 15, fat: 4.6, fiber: 0.8, sugar: 1.9, sodium: 279.2 },
+  { name: 'Greek yogurt + berries', typicalGrams: 250, kcal: 88, protein: 7.2, carbs: 10.4, fat: 2, fiber: 1.6, sugar: 7.2, sodium: 26 },
+  { name: 'Veggie stir-fry with tofu', typicalGrams: 400, kcal: 95, protein: 5, carbs: 10, fat: 4, fiber: 2, sugar: 2, sodium: 205 },
 ];
 
 /** foodLabels.ts entries (the camera's recognizable vocabulary) also serve

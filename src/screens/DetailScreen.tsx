@@ -47,9 +47,9 @@ export function DetailScreen({ logId, onBack }: { logId: string; onBack: () => v
 
         <div className="card" style={{ marginTop: 22, borderRadius: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="stat-label">PORTION</div>
+            <div className="stat-label">AMOUNT EATEN</div>
             <div className="mono" style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-dim)' }}>
-              {log.gramsPerServing}g = 1 serving
+              {log.kcal} kcal / 100g
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14 }}>
@@ -82,7 +82,7 @@ export function DetailScreen({ logId, onBack }: { logId: string; onBack: () => v
           <MacroRow label="Quality score" value={log.grade} />
         </div>
         <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.5 }}>
-          Calculated automatically from this food's profile × grams eaten.
+          Calculated from this food's nutrition per 100g × grams eaten ÷ 100. Adjust the amount above — everything else follows.
         </div>
 
         <button type="button" className="btn btn-primary" style={{ marginTop: 18, display: 'block', width: '100%' }} onClick={() => setShowSearch(true)}>

@@ -1,8 +1,7 @@
 export type Grade = 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D';
 
-/** Macro values as they'd apply to a food's whole reference serving
- * (gramsPerServing grams) — not per-gram. Scale by grams/gramsPerServing
- * to get the amount for an actual portion. */
+/** Macro values per 100g of this food — the standard nutrition-label basis.
+ * Scale by grams/100 to get the amount for an actual portion. */
 export interface Macros {
   kcal: number;
   protein: number;
@@ -22,8 +21,9 @@ export interface FoodMemoryEntry extends Macros {
   id: string;
   name: string;
   grade: Grade;
-  /** weight, in grams, that the Macros above describe */
-  gramsPerServing: number;
+  /** default grams to seed a new log with — just a starting guess, not part
+   * of the nutrition math (Macros above is always per 100g) */
+  typicalGrams: number;
   photoHash: string | null;
   thumbnail: string | null;
   timesLogged: number;
@@ -39,9 +39,8 @@ export interface LogEntry extends Macros {
   memoryId: string;
   name: string;
   grade: Grade;
-  /** weight, in grams, that the Macros above describe (copied from the food at log time) */
-  gramsPerServing: number;
-  /** actual amount eaten, in grams — the only thing a user adjusts directly */
+  /** actual amount eaten, in grams — the only thing a user adjusts directly.
+   * Macros above are per 100g, so actual amounts are kcal * grams / 100, etc. */
   grams: number;
   loggedAt: number;
   note: string;

@@ -217,6 +217,20 @@ input {
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(115deg, #191b1f 0 14px, #141619 14px 28px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* The camera is framed to a square, letterboxed top/bottom by .viewfinder's
+   own diagonal-stripe background — edge to edge horizontally so it reads as
+   the actual capture frame, not just a guide drawn over a bigger feed. */
+.viewfinder-square {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
 }
 .viewfinder video {
   position: absolute;
@@ -256,12 +270,8 @@ input {
 
 .scan-box {
   position: absolute;
-  left: 52px;
-  right: 52px;
-  top: 150px;
-  bottom: 250px;
+  inset: 0;
   border: 1.5px solid var(--accent);
-  border-radius: 20px;
   overflow: hidden;
 }
 .scan-line {

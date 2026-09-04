@@ -57,22 +57,29 @@ export function CameraScreen({
   return (
     <div style={{ height: '100%', position: 'relative' }}>
       <div className="viewfinder">
-        {/* Always mounted (not gated on status) so videoRef.current already
-            exists by the time start() assigns the stream to it — otherwise
-            the stream attaches to nothing and the element stays blank. */}
-        <video ref={videoRef} autoPlay muted playsInline style={{ opacity: status === 'ready' ? 1 : 0 }} />
-        {status !== 'ready' && (
-          <>
-            <div className="viewfinder-vignette" />
-            <div className="viewfinder-hint">
-              {status === 'unsupported' && <>CAMERA NOT AVAILABLE<br />on this device/browser</>}
-              {status === 'denied' && <>CAMERA ACCESS DENIED<br />allow it in browser settings</>}
-              {(status === 'idle' || status === 'starting') && <>STARTING CAMERA…</>}
-              {status === 'error' && <>CAMERA ERROR<br />try again</>}
+        <div className="viewfinder-square">
+          {/* Always mounted (not gated on status) so videoRef.current already
+              exists by the time start() assigns the stream to it — otherwise
+              the stream attaches to nothing and the element stays blank. */}
+          <video ref={videoRef} autoPlay muted playsInline style={{ opacity: status === 'ready' ? 1 : 0 }} />
+          {status !== 'ready' && (
+            <>
+              <div className="viewfinder-vignette" />
+              <div className="viewfinder-hint">
+                {status === 'unsupported' && <>CAMERA NOT AVAILABLE<br />on this device/browser</>}
+                {status === 'denied' && <>CAMERA ACCESS DENIED<br />allow it in browser settings</>}
+                {(status === 'idle' || status === 'starting') && <>STARTING CAMERA…</>}
+                {status === 'error' && <>CAMERA ERROR<br />try again</>}
+              </div>
+            </>
+          )}
+          {status === 'ready' && <div className="viewfinder-topfade" />}
+          {scanning && (
+            <div className="scan-box">
+              <div className="scan-line" />
             </div>
-          </>
-        )}
-        {status === 'ready' && <div className="viewfinder-topfade" />}
+          )}
+        </div>
       </div>
 
       <div style={{ position: 'relative', padding: '14px 16px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -84,12 +91,6 @@ export function CameraScreen({
           ⚡
         </button>
       </div>
-
-      {scanning && (
-        <div className="scan-box">
-          <div className="scan-line" />
-        </div>
-      )}
 
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 88, padding: '0 16px 8px' }}>
         <div className="chip-row">

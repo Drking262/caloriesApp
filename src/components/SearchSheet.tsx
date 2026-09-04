@@ -54,7 +54,10 @@ export function SearchSheet({ onClose, onPickMemory, onPickDatabase }: SearchShe
                 <div className="name">{m.name}</div>
                 <div className="sub">Logged {m.timesLogged}× · {m.grade}</div>
               </div>
-              <div className="kcal">{m.kcal}</div>
+              <div style={{ textAlign: 'right' }}>
+                <div className="kcal">{m.kcal}</div>
+                <div className="sub" style={{ marginTop: 2 }}>kcal/100g</div>
+              </div>
             </button>
           ))}
 
@@ -74,7 +77,10 @@ export function SearchSheet({ onClose, onPickMemory, onPickDatabase }: SearchShe
                 <div className="name">{f.name}</div>
                 <div className="sub">not in your memory yet</div>
               </div>
-              <div className="kcal">{f.kcal}</div>
+              <div style={{ textAlign: 'right' }}>
+                <div className="kcal">{f.kcal}</div>
+                <div className="sub" style={{ marginTop: 2 }}>kcal/100g</div>
+              </div>
             </button>
           ))}
 

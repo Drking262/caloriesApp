@@ -151,15 +151,22 @@ export function thumbnailFromSource(source: CanvasImageSource, size = 160): stri
 /** Freeze the current video frame into a plain canvas, once, so hashing,
  * the thumbnail, and (async, later) model classification all see the exact
  * same moment — the live video keeps playing and would otherwise have
- * moved on by the time an awaited classification call gets to it. */
+ * moved on by the time an awaited classification call gets to it.
+ *
+ * Center-cropped to a square — matching the square viewfinder framing —
+ * so every downstream consumer (hash, thumbnail, classifier) sees the same
+ * square the user actually composed, not the full sensor rectangle. */
 export function snapshotCanvas(video: HTMLVideoElement, maxEdge = 480): HTMLCanvasElement {
   const w = video.videoWidth || maxEdge;
   const h = video.videoHeight || maxEdge;
-  const scale = Math.min(1, maxEdge / Math.max(w, h));
+  const side = Math.min(w, h);
+  const sx = (w - side) / 2;
+  const sy = (h - side) / 2;
+  const size = Math.min(side, maxEdge);
   const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.round(w * scale));
-  canvas.height = Math.max(1, Math.round(h * scale));
+  canvas.width = size;
+  canvas.height = size;
   const ctx = canvas.getContext('2d');
-  if (ctx) ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  if (ctx) ctx.drawImage(video, sx, sy, side, side, 0, 0, size, size);
   return canvas;
 }
