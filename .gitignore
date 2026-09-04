@@ -15,6 +15,9 @@ dist-ssr
 # Isolated workspaces for subagent-driven feature work
 .worktrees
 
+# Subagent-driven-development scratch space (ledger, briefs, review packages)
+.superpowers
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
