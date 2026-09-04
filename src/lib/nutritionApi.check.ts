@@ -67,4 +67,18 @@ assertEqual(
   'missing description is filtered out entirely',
 );
 
+// Branded results get the brand folded into the display name so a row
+// like "MANGO" doesn't read as a plain fruit when it's actually one
+// company's dried-snack product (verified live: a branded dried mango at
+// 325 kcal/100g topped an unrestricted "mango" search).
+assertEqual(
+  mapFdcFoodToDatabaseFood({
+    description: 'MANGO',
+    brandOwner: 'Sol Simple',
+    foodNutrients: [{ nutrientNumber: '208', value: 325 }],
+  }),
+  { name: 'MANGO (Sol Simple)', typicalGrams: 100, kcal: 325, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 },
+  'branded result folds brandOwner into the display name',
+);
+
 console.log('nutritionApi.check.ts: all checks passed');

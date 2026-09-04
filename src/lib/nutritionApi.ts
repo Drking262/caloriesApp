@@ -46,6 +46,7 @@ interface FdcNutrient {
 
 interface FdcFood {
   description?: string;
+  brandOwner?: string;
   foodNutrients?: FdcNutrient[];
 }
 
@@ -66,8 +67,14 @@ export function mapFdcFoodToDatabaseFood(food: FdcFood): DatabaseFood | null {
   const kcal = nutrients.find((n) => n.nutrientNumber === NUTRIENT_NUMBERS.kcal);
   if (!kcal || !Number.isFinite(Number(kcal.value))) return null;
 
-  const name = (food.description ?? '').trim();
-  if (!name) return null;
+  const description = (food.description ?? '').trim();
+  if (!description) return null;
+
+  // Branded results can otherwise look generic (e.g. a "MANGO" branded
+  // dried-fruit snack at 325 kcal/100g rendering identically to a real
+  // mango) — the brand makes the row self-describing instead of misleading.
+  const brand = food.brandOwner?.trim();
+  const name = brand ? `${description} (${brand})` : description;
 
   return {
     name,
@@ -103,6 +110,10 @@ export interface NutritionSearchOptions {
   dataTypes?: string[];
   /** lets a caller (e.g. a debounced search box) cancel a stale request */
   signal?: AbortSignal;
+  /** called when a request fails for any reason (network, timeout, non-2xx,
+   * rate limit) — lets a caller distinguish "unavailable" from "genuinely
+   * no results" without searchNutrition itself throwing */
+  onFailure?: () => void;
 }
 
 /** Never throws — any failure (offline, timeout, rate limit, bad response)
@@ -133,7 +144,11 @@ export async function searchNutrition(query: string, options: NutritionSearchOpt
 
   try {
     const res = await fetch(`${BASE_URL}?${params}`, { signal: controller.signal });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.warn(`nutritionApi: USDA search failed with ${res.status}`);
+      options.onFailure?.();
+      return [];
+    }
     const data: FdcSearchResponse = await res.json();
     const mapped = (data.foods ?? [])
       .map(mapFdcFoodToDatabaseFood)
@@ -141,7 +156,9 @@ export async function searchNutrition(query: string, options: NutritionSearchOpt
     const results = dedupeByName(mapped).slice(0, limit);
     cache.set(cacheKey, results);
     return results;
-  } catch {
+  } catch (err) {
+    console.warn('nutritionApi: USDA search failed', err);
+    options.onFailure?.();
     return [];
   } finally {
     clearTimeout(timeoutId);

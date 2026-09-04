@@ -17,8 +17,8 @@ interface SearchSheetProps {
 export function SearchSheet({ onClose, onPickMemory, onPickDatabase }: SearchSheetProps) {
   const { state } = useStore();
   const [query, setQuery] = useState('');
-  const [apiHits, setApiHits] = useState<DatabaseFood[]>([]);
-  const [apiOffline, setApiOffline] = useState(false);
+  const [apiResult, setApiResult] = useState<{ query: string; hits: DatabaseFood[] }>({ query: '', hits: [] });
+  const [apiUnavailable, setApiUnavailable] = useState(false);
 
   const memoryHits = useMemo(() => {
     const ranked = byFrecency(state.memory);
@@ -40,20 +40,20 @@ export function SearchSheet({ onClose, onPickMemory, onPickDatabase }: SearchShe
   useEffect(() => {
     const q = query.trim();
     if (q.length < MIN_QUERY_LENGTH) {
-      setApiHits([]);
-      setApiOffline(false);
+      setApiResult({ query: q, hits: [] });
+      setApiUnavailable(false);
       return;
     }
     if (!navigator.onLine) {
-      setApiHits([]);
-      setApiOffline(true);
+      setApiResult({ query: q, hits: [] });
+      setApiUnavailable(true);
       return;
     }
-    setApiOffline(false);
+    setApiUnavailable(false);
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      searchNutrition(q, { signal: controller.signal }).then((results) => {
-        if (!controller.signal.aborted) setApiHits(results);
+      searchNutrition(q, { signal: controller.signal, onFailure: () => setApiUnavailable(true) }).then((results) => {
+        if (!controller.signal.aborted) setApiResult({ query: q, hits: results });
       });
     }, DEBOUNCE_MS);
     return () => {
@@ -61,6 +61,14 @@ export function SearchSheet({ onClose, onPickMemory, onPickDatabase }: SearchShe
       controller.abort();
     };
   }, [query]);
+
+  // Only trust apiResult while it still matches the current query — the
+  // debounce plus network round trip means a slower previous response can
+  // resolve after the user has already typed something else.
+  const apiHits = useMemo(
+    () => (apiResult.query === query.trim() ? apiResult.hits : []),
+    [apiResult, query],
+  );
 
   const excludeFromGlobal = useMemo(
     () => new Set([...memoryNames, ...databaseHits.map((f) => f.name.toLowerCase())]),
@@ -128,9 +136,9 @@ export function SearchSheet({ onClose, onPickMemory, onPickDatabase }: SearchShe
             </button>
           ))}
 
-          {apiOffline && (
+          {apiUnavailable && (
             <div style={{ color: 'var(--text-dim)', fontSize: 13, padding: '12px 4px' }}>
-              Global search unavailable — check your connection.
+              Global search unavailable right now.
             </div>
           )}
           {globalHits.length > 0 && <div className="sheet-section">GLOBAL DATABASE</div>}
@@ -156,7 +164,7 @@ export function SearchSheet({ onClose, onPickMemory, onPickDatabase }: SearchShe
             </button>
           ))}
 
-          {memoryHits.length === 0 && databaseHits.length === 0 && globalHits.length === 0 && !apiOffline && (
+          {memoryHits.length === 0 && databaseHits.length === 0 && globalHits.length === 0 && !apiUnavailable && (
             <div style={{ color: 'var(--text-dim)', fontSize: 13, padding: '12px 4px' }}>No matches.</div>
           )}
         </div>

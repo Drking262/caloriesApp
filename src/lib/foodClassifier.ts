@@ -1,6 +1,6 @@
 import type { DatabaseFood } from './foodDatabase';
-import { FOOD_LABEL_MAP } from './foodLabels';
-import { searchNutrition, GENERIC_FOOD_DATA_TYPES } from './nutritionApi';
+import { FOOD_LABEL_MAP } from './foodLabels.ts';
+import { searchNutrition, GENERIC_FOOD_DATA_TYPES } from './nutritionApi.ts';
 
 /**
  * Real, on-device food recognition — not a random guess, and not capped at
@@ -101,7 +101,7 @@ export async function classifyFood(frame: HTMLCanvasElement): Promise<FoodPredic
     if (top && top.score >= MIN_PROBABILITY) {
       const localFood = FOOD_LABEL_MAP[top.label];
       if (localFood) {
-        const food = await withLiveNutrition(localFood, top.label);
+        const food = shouldSkipLiveEnrichment(top.label) ? localFood : await withLiveNutrition(localFood, top.label);
         return { food, label: top.label, probability: top.score };
       }
     }
@@ -111,6 +111,39 @@ export async function classifyFood(frame: HTMLCanvasElement): Promise<FoodPredic
     // back to the plain random-database guess, app stays usable either way
     return null;
   }
+}
+
+/** Labels whose curated local dish has no Czech-script/gloss signal of its
+ * own (so the pattern check below wouldn't catch them) but is still a
+ * Czech dish with no real USDA coverage — enumerated explicitly rather
+ * than guessed at. */
+const CZECH_DISH_LABELS_WITHOUT_SCRIPT_SIGNAL = new Set([
+  'schnitzel with potato salad',
+  'pork goulash',
+  'mushroom omelette',
+  'buchty',
+  'utopenci',
+]);
+
+/** Does this label carry a Czech-specific signal? USDA has no Czech
+ * coverage and matches loosely (verified live: requireAllWords is false),
+ * so a Czech dish's English gloss words alone can pull in a
+ * confidently-scored but unrelated match — e.g. "smažený sýr (fried
+ * cheese)" returned "Potato, french fries, with cheese" at 260 kcal/100g.
+ * Skipping live enrichment for these keeps USDA to what it's actually good
+ * at (foods it has real coverage for) and leaves curated local data in
+ * charge of the rest.
+ *
+ * ponytail: this is a heuristic, not a data-model guarantee — it checks
+ * only the label (never the curated display name, since several
+ * genuinely-international foods like "banana" have Czech display names
+ * too, and must keep enriching live). If foodLabels.ts ever adds a new
+ * Czech dish with a plain-English label and no diacritics anywhere, it
+ * needs adding to the explicit set above. A proper fix would tag
+ * Czech-sourced entries in the data model directly. */
+export function shouldSkipLiveEnrichment(label: string): boolean {
+  if (CZECH_DISH_LABELS_WITHOUT_SCRIPT_SIGNAL.has(label)) return true;
+  return /[^\x00-\x7F]/.test(label) || label.includes('(');
 }
 
 /** Keeps the local entry's curated name/typicalGrams (especially important
