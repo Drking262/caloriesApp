@@ -1,5 +1,6 @@
 import type { DatabaseFood } from './foodDatabase';
 import { FOOD_LABEL_MAP } from './foodLabels';
+import { searchNutrition, GENERIC_FOOD_DATA_TYPES } from './nutritionApi';
 
 /**
  * Real, on-device food recognition — not a random guess, and not capped at
@@ -98,8 +99,11 @@ export async function classifyFood(frame: HTMLCanvasElement): Promise<FoodPredic
 
     const top = ranked[0];
     if (top && top.score >= MIN_PROBABILITY) {
-      const food = FOOD_LABEL_MAP[top.label];
-      if (food) return { food, label: top.label, probability: top.score };
+      const localFood = FOOD_LABEL_MAP[top.label];
+      if (localFood) {
+        const food = await withLiveNutrition(localFood, top.label);
+        return { food, label: top.label, probability: top.score };
+      }
     }
     return null;
   } catch {
@@ -107,4 +111,23 @@ export async function classifyFood(frame: HTMLCanvasElement): Promise<FoodPredic
     // back to the plain random-database guess, app stays usable either way
     return null;
   }
+}
+
+/** Keeps the local entry's curated name/typicalGrams (especially important
+ * for Czech dishes, which USDA has no coverage for) but prefers live,
+ * sourced macros when USDA has a confident generic-food match. Never
+ * throws — searchNutrition already resolves to [] on any failure. */
+async function withLiveNutrition(local: DatabaseFood, label: string): Promise<DatabaseFood> {
+  const [live] = await searchNutrition(label, { limit: 1, dataTypes: GENERIC_FOOD_DATA_TYPES });
+  if (!live) return local;
+  return {
+    ...local,
+    kcal: live.kcal,
+    protein: live.protein,
+    carbs: live.carbs,
+    fat: live.fat,
+    fiber: live.fiber,
+    sugar: live.sugar,
+    sodium: live.sodium,
+  };
 }
