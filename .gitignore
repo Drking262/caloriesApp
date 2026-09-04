@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Isolated workspaces for subagent-driven feature work
+.worktrees
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
