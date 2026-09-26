@@ -21,6 +21,9 @@ dist-ssr
 # Subagent-driven-development scratch space (ledger, briefs, review packages)
 .superpowers
 
+# Personal photo corpora for scripts/eval (may be private, possibly large)
+scripts/eval/data/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

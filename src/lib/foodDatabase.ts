@@ -1,5 +1,5 @@
-import type { Macros } from '../types';
-import { FOOD_LABEL_MAP } from './foodLabels';
+import type { Macros } from '../types.ts';
+import { FOOD_LABEL_MAP } from './foodLabels.ts';
 
 export interface DatabaseFood extends Macros {
   name: string;

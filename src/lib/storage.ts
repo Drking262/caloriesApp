@@ -26,6 +26,7 @@ function seedState(): AppState {
     sodium: 34,
     grade: gradeFor({ kcal: 123, protein: 4.6, fiber: 2.3, sugar: 6.3, sodium: 34 }),
     photoHash: null,
+    photoHashes: [],
     thumbnail: null,
     timesLogged: 6,
     lastLoggedAt: todayAt(8, 12),
@@ -46,6 +47,7 @@ function seedState(): AppState {
     sodium: 188.9,
     grade: gradeFor({ kcal: 266.7, protein: 5, fiber: 1.1, sugar: 10, sodium: 188.9 }),
     photoHash: null,
+    photoHashes: [],
     thumbnail: null,
     timesLogged: 2,
     lastLoggedAt: todayAt(10, 45),
@@ -110,7 +112,13 @@ export function loadState(): AppState {
     if (!parsed.goal || !Array.isArray(parsed.memory) || !Array.isArray(parsed.logs)) {
       return seedState();
     }
-    return parsed;
+    // Migration: photoHashes was added with multi-reference memory (fix #6) —
+    // pre-upgrade entries carry only photoHash. Default the new list rather
+    // than wiping the user's food memory.
+    return {
+      ...parsed,
+      memory: parsed.memory.map((m) => ({ ...m, photoHashes: m.photoHashes ?? [] })),
+    };
   } catch {
     return seedState();
   }

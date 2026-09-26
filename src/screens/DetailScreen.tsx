@@ -8,9 +8,32 @@ const STEP = 10;
 const MIN_GRAMS = 10;
 const MAX_GRAMS = 2000;
 
-export function DetailScreen({ logId, onBack }: { logId: string; onBack: () => void }) {
+/** A runner-up food suggestion shown for one-tap correction — what the
+ * classifier thought this might have been instead (FoodPrediction.topK,
+ * minus the label that already won) when the logged food looks wrong. */
+export interface DetailAlternative {
+  /** display-ready food name — e.g. what FOOD_LABEL_MAP resolves the raw
+   * CLIP label into ("Svíčková", not "svickova (Czech dish)") */
+  label: string;
+  /** classifier probability 0–1; displayed small so the user can tell a
+   * confident runner-up from a long shot */
+  score: number;
+}
+
+export function DetailScreen({
+  logId,
+  onBack,
+  alternatives,
+}: {
+  logId: string;
+  onBack: () => void;
+  /** INTEGRATION: the main thread passes the classifier's runner-up labels
+   * into here (via App.tsx / the logged-detail handoff) in this shape. */
+  alternatives?: DetailAlternative[];
+}) {
   const { state, setGrams, reassignToMemory, reassignToDatabaseFood, deleteLog } = useStore();
   const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [gramsInput, setGramsInput] = useState<string | null>(null);
 
   const log = state.logs.find((l) => l.id === logId);
@@ -89,6 +112,27 @@ export function DetailScreen({ logId, onBack }: { logId: string; onBack: () => v
           Not the right food? Fix it
         </button>
 
+        {/* Runner-up suggestions from the classifier, when they were passed
+            in. A chip intentionally does NOT reassign the log directly —
+            there is no label→memory resolution path short of SearchSheet's
+            layering (memory → local DB → live USDA) — but it opens the sheet
+            pre-filled with the suggestion, so the correction is one tap. */}
+        {alternatives && alternatives.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <div className="stat-label" style={{ marginBottom: 8 }}>OR WAS IT</div>
+            <div className="chip-row">
+              {alternatives.map((alt) => (
+                <button key={alt.label} type="button" className="chip" onClick={() => { setSearchQuery(alt.label); setShowSearch(true); }}>
+                  {alt.label}
+                  <span className="mono" style={{ marginLeft: 6, fontWeight: 500, fontSize: 10, color: 'var(--text-faint)' }}>
+                    {Math.round(alt.score * 100)}%
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <button
           type="button"
           style={{ marginTop: 10, padding: 14, width: '100%', textAlign: 'center', fontWeight: 600, fontSize: 13, color: 'var(--text-faint)' }}
@@ -100,7 +144,8 @@ export function DetailScreen({ logId, onBack }: { logId: string; onBack: () => v
 
       {showSearch && (
         <SearchSheet
-          onClose={() => setShowSearch(false)}
+          initialQuery={searchQuery}
+          onClose={() => { setShowSearch(false); setSearchQuery(''); }}
           onPickMemory={(entry) => reassignToMemory(logId, entry)}
           onPickDatabase={(food) => reassignToDatabaseFood(logId, food)}
         />

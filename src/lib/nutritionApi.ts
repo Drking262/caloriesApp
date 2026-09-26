@@ -89,6 +89,57 @@ export function mapFdcFoodToDatabaseFood(food: FdcFood): DatabaseFood | null {
   };
 }
 
+/** Helper words the USDA itself sprinkles into descriptions (and CLIP
+ * prompt templates into queries) — carrying no discriminating signal. */
+const RELEVANCE_STOP_WORDS = new Set([
+  'a', 'an', 'the', 'of', 'on', 'with', 'and', 'in',
+  'raw', 'fresh', 'cooked', 'dish', 'type', 'food', 'photo', 'plate', 'bowl', 'cup', 'glass',
+]);
+
+/** Normalize for word comparison: lowercase, strip everything but
+ * letters/digits/spaces (Unicode-aware, so Czech/Latin diacritics
+ * survive — "smažený" stays one comparable word), singularize naively
+ * so near-duplicates like "potatoes"/"potato" fold together. */
+function normalizeRelevanceWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N} ]/gu, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 0 && !RELEVANCE_STOP_WORDS.has(w))
+    .map((w) => (w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w));
+}
+
+/** Lowercase and strip everything but letters/digits/spaces —
+ * Unicode-aware, so Czech/Latin diacritics survive ("smažený" stays one
+ * comparable word). Keeps token order, unlike the word set. */
+function normalizeRelevanceText(text: string): string {
+  return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
+/** Decide if a USDA hit is relevant to a query: the hyphen/apostrophe-stripped
+ * description must contain every non-helper query word, or all it's
+ * near-duplicates (e.g. mashed potatoes vs mashed potato). Exact-word match
+ * after normalization — deliberately no per-word substring matching, which
+ * produces false hits (e.g. 'apple' matching 'pineapple'). As a safety net
+ * for USDA's multi-word phrasing (word order, dropped helper words), the
+ * whole normalized query string as a substring of the normalized
+ * description also counts — but only for multi-word queries, where a
+ * chance substring is unlikely (and a one-word substring like 'apple' in
+ * 'pineapple' is exactly the false hit this gate exists to prevent).
+ *
+ * Pure and network-free on purpose — asserted in nutritionApi.check.ts. */
+export function isRelevantToQuery(description: string, query: string): boolean {
+  const queryWords = normalizeRelevanceWords(query);
+  // Substring matching must never decide a single word ('apple' vs
+  // 'pineapple') — it's a multi-word phrasing safety net only.
+  if (queryWords.length <= 1) {
+    return queryWords.length === 1 && normalizeRelevanceWords(description).includes(queryWords[0]);
+  }
+  const descriptionWords = new Set(normalizeRelevanceWords(description));
+  if (queryWords.every((w) => descriptionWords.has(w))) return true;
+  return normalizeRelevanceText(description).includes(normalizeRelevanceText(query));
+}
+
 function dedupeByName(foods: DatabaseFood[]): DatabaseFood[] {
   const seen = new Set<string>();
   const out: DatabaseFood[] = [];

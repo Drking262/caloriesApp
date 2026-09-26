@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCamera } from '../hooks/useCamera';
-import { useStore } from '../state/store';
+import { useStore, type CaptureResultInfo } from '../state/store';
 import { sumMacros } from '../lib/nutrition';
 import { todaysLogs } from '../lib/selectors';
 import { byFrecency } from '../lib/match';
@@ -12,7 +12,7 @@ export function CameraScreen({
   onLogged,
   onNavigate,
 }: {
-  onLogged: (logId: string) => void;
+  onLogged: (logId: string, info: CaptureResultInfo) => void;
   onNavigate: (screen: Screen) => void;
 }) {
   const { videoRef, status, start, stop, capture } = useCamera();
@@ -44,14 +44,22 @@ export function CameraScreen({
     const shot = capture();
     if (!shot) return;
     setScanning(true);
-    const result = await logFromCapture(shot.hashes, shot.thumbnail, shot.frame);
+    const info = await logFromCapture(shot.hashes, shot.thumbnail, shot.frame);
     setScanning(false);
-    onLogged(result.logId);
+    onLogged(info.logId, info);
   }
 
   function handleRepeat() {
     if (!topMemory) return;
-    onLogged(logFromMemory(topMemory.id));
+    const logId = logFromMemory(topMemory.id);
+    onLogged(logId, {
+      logId,
+      route: 'memory-auto' as const,
+      confidence: 1,
+      alternatives: [],
+      needsConfirm: false,
+      undoLogId: null,
+    });
   }
 
   return (
@@ -130,8 +138,14 @@ export function CameraScreen({
       {showSearch && (
         <SearchSheet
           onClose={() => setShowSearch(false)}
-          onPickMemory={(entry) => onLogged(logFromMemory(entry.id))}
-          onPickDatabase={(food) => onLogged(logFromDatabaseFood(food))}
+          onPickDatabase={(food) => {
+            const logId = logFromDatabaseFood(food);
+            onLogged(logId, { logId, route: 'clip', confidence: null, alternatives: [], needsConfirm: false, undoLogId: null });
+          }}
+          onPickMemory={(entry) => {
+            const logId = logFromMemory(entry.id);
+            onLogged(logId, { logId, route: 'memory-auto', confidence: 1, alternatives: [], needsConfirm: false, undoLogId: null });
+          }}
         />
       )}
     </div>

@@ -12,11 +12,14 @@ interface SearchSheetProps {
   onClose: () => void;
   onPickMemory: (entry: FoodMemoryEntry) => void;
   onPickDatabase: (food: DatabaseFood) => void;
+  /** prefill the query — used by the "or was it…" correction chips so a
+   *  classifier runner-up is genuinely one tap, not "open search, retype" */
+  initialQuery?: string;
 }
 
-export function SearchSheet({ onClose, onPickMemory, onPickDatabase }: SearchSheetProps) {
+export function SearchSheet({ onClose, onPickMemory, onPickDatabase, initialQuery = '' }: SearchSheetProps) {
   const { state } = useStore();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [apiResult, setApiResult] = useState<{ query: string; hits: DatabaseFood[] }>({ query: '', hits: [] });
   const [apiUnavailable, setApiUnavailable] = useState(false);
 

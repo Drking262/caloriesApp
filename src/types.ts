@@ -24,7 +24,18 @@ export interface FoodMemoryEntry extends Macros {
   /** default grams to seed a new log with — just a starting guess, not part
    * of the nutrition math (Macros above is always per 100g) */
   typicalGrams: number;
+  /** canonical stored hash: the unrotated hash of the first photo this entry
+   * was learned from. Kept as the single-hash back-compat field — old saved
+   * data only has this one, and readers that carry one hash forward
+   * (stale-guess migration in the store) keep using it. */
   photoHash: string | null;
+  /** additional accepted hash variants from other plating sessions of the
+   * same food (a plate rearranged shifts the dHash even when it is the same
+   * dish). Matching takes the min distance across photoHash + photoHashes;
+   * the list is capped (HASH_VARIANTS_PER_ENTRY in lib/perceptualHash) so a
+   * frequently-logged entry does not accumulate unbounded variants — the
+   * store owns adding/capping, this is just the shape. */
+  photoHashes: string[];
   thumbnail: string | null;
   timesLogged: number;
   lastLoggedAt: number;

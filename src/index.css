@@ -617,3 +617,61 @@ input {
   letter-spacing: 0.06em;
   margin-top: 4px;
 }
+
+/* ---------- toast ---------- */
+/* Floating confirmation/undo card above the tab bar (logged screen). Mounted
+   always, toggled via .toast.visible so dismissal is animated, not abrupt. */
+.toast {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 76px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+.toast.visible {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.toast-undo {
+  flex: none;
+  padding: 6px 10px;
+  margin: -6px -4px;
+  border-radius: 9px;
+  font: 700 13px/1 var(--sans);
+  color: var(--accent);
+}
+.toast-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+/* Confirm-card variant: a question ("Same as yesterday's plate?") carrying
+   two decisions, so it gets headline + sub copy instead of the one-liner. */
+.toast-title {
+  font: 700 13.5px/1.3 var(--sans);
+  color: var(--text);
+}
+.toast-body {
+  font: 500 11.5px/1.4 var(--sans);
+  color: var(--text-dim);
+  margin-top: 3px;
+}

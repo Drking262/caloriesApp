@@ -1,4 +1,4 @@
-import { mapFdcFoodToDatabaseFood } from './nutritionApi.ts';
+import { mapFdcFoodToDatabaseFood, isRelevantToQuery } from './nutritionApi.ts';
 
 function assertEqual(actual: unknown, expected: unknown, label: string) {
   const a = JSON.stringify(actual);
@@ -80,5 +80,50 @@ assertEqual(
   { name: 'MANGO (Sol Simple)', typicalGrams: 100, kcal: 325, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 },
   'branded result folds brandOwner into the display name',
 );
+
+// --- isRelevantToQuery: gate between a USDA hit's name and the query.
+// Every significant (non-stop-word) query word must appear among the
+// description words after normalization, or the whole normalized query
+// must appear as a substring of the normalized description.
+
+// The canonical case: hyphens/commas/case stripped, "raw" is a stop word.
+assertEqual(isRelevantToQuery('Banana, raw', 'banana'), true, "'Banana, raw' is relevant to 'banana'");
+
+// The regression this gate exists for: "cheese" appears, but "fried"
+// doesn't, and the Czech words don't either — not relevant.
+assertEqual(
+  isRelevantToQuery('Potato, french fries, with cheese', 'smažený sýr (fried cheese)'),
+  false,
+  "unrelated fries-with-cheese hit is NOT relevant to 'smažený sýr (fried cheese)'",
+);
+
+// Brand fold-in ("MANGO (Sol Simple)") never breaks relevance: 'sol' and
+// 'simple' are extra description words, the query word still appears.
+assertEqual(isRelevantToQuery('MANGO (Sol Simple)', 'mango'), true, 'brand-folded name still matches plain query');
+
+// Multi-word query: every significant word must be present.
+assertEqual(isRelevantToQuery('Chicken curry with rice', 'curry chicken'), true, 'multi-word query matches superset description');
+assertEqual(isRelevantToQuery('Chicken curry with rice', 'curry'), true, 'single query word contained in description');
+assertEqual(isRelevantToQuery('Chicken curry with rice', 'chicken rice soup'), false, 'missing query word rejects the hit');
+
+// Substring matching is deliberately NOT done per word: 'apple' must not
+// match 'pineapple'.
+assertEqual(isRelevantToQuery('Pineapple, raw', 'apple'), false, "substring hit ('pineapple' ~ 'apple') is rejected");
+
+// ...but the WHOLE normalized query string as a substring of the
+// normalized description is allowed (USDA's multi-word phrasing safety
+// net — punctuation-stripped order, helper words intact).
+assertEqual(isRelevantToQuery('Rice with chicken curry', 'chicken curry'), true, 'normalized-phrase substring matches USDA multi-word phrasing');
+// If the words are there but in NO matching order, the word-set rule
+// still carries it.
+assertEqual(isRelevantToQuery('Curry, chicken, with rice', 'chicken curry'), true, 'word-set rule handles reordered multi-word phrasing');
+// Singular/plural near-duplicates fold via naive singularization.
+assertEqual(isRelevantToQuery('Mashed potatoes, home-prepared', 'mashed potato'), true, 'word-set rule folds singular/plural near-duplicates');
+
+// Prompt-template words leaking in from a query must not change the verdict.
+assertEqual(isRelevantToQuery('Banana, raw', 'a photo of banana, a type of food'), true, 'stop words (a/of/type/food/photo) are ignored');
+
+// A query with no significant words at all can never be relevant.
+assertEqual(isRelevantToQuery('Banana, raw', 'a photo of food'), false, 'query reduced to only stop words is not relevant');
 
 console.log('nutritionApi.check.ts: all checks passed');

@@ -30,6 +30,12 @@ export const HASH_BITS = (HASH_COLS - 1) * HASH_ROWS; // 64
  * seen between genuinely different foods. */
 export const ROTATION_TRIALS_DEG = [0, -8, -4, 4, 8];
 
+/** Cap on a memory entry's accepted hash variants (FoodMemoryEntry.photoHashes)
+ * — the store enforces it when learning new variants; without a cap a much-
+ * logged entry could keep accumulating "same shape, different plating" hashes
+ * until it matches plates that aren't this food at all. */
+export const HASH_VARIANTS_PER_ENTRY = 6;
+
 let hashCanvas: HTMLCanvasElement | null = null;
 
 function getHashCanvas(): HTMLCanvasElement {
